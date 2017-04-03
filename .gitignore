@@ -53,6 +53,7 @@ cache.mk
 
 # Ruby's local gem information
 Gemfile.lock
+Jarfile.lock
 
 # Temporary test reports
 report.xml
@@ -127,4 +128,7 @@ perf.data.old
 bm_diff_new/
 bm_diff_old/
 bm_*.json
+
+# JBundler
+.jbundler/
 
