@@ -121,7 +121,12 @@ task 'gem:native' do
 end
 
 # Define dependencies between the suites.
-task 'suite:wrapper' => [:compile, :rubocop]
+if RUBY_PLATFORM == 'java'
+  task 'suite:wrapper' => :rubocop
+else
+  task 'suite:wrapper' => [:compile, :rubocop]
+end
+
 task 'suite:idiomatic' => 'suite:wrapper'
 task 'suite:bidi' => 'suite:wrapper'
 task 'suite:server' => 'suite:wrapper'
