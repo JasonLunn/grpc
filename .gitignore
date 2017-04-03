@@ -53,6 +53,7 @@ cache.mk
 
 # Ruby's local gem information
 Gemfile.lock
+Jarfile.lock
 
 # Temporary test reports
 report.xml
@@ -118,3 +119,6 @@ gdb.txt
 
 # ctags file
 tags
+
+# JBundler
+.jbundler/
