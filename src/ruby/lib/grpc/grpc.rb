@@ -18,6 +18,8 @@ begin
                                      File.dirname(__FILE__))
   if File.directory?(distrib_lib_dir)
     require_relative "#{distrib_lib_dir}/grpc_c"
+  elsif RUBY_PLATFORM == 'java'
+    require 'grpc-java/grpc'
   else
     require 'grpc/grpc_c'
   end
