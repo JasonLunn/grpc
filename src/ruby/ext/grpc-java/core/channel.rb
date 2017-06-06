@@ -27,6 +27,12 @@ module GRPC
       def connectivity_state *args
         @connectivity_state
       end
+      def watch_connectivity_state *args
+      
+      end
+      def target
+        ''
+      end
     end
   end
 end

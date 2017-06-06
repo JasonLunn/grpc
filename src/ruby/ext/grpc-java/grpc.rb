@@ -1,9 +1,12 @@
 require 'jbundler'
 
 Struct.new 'Status', :code, :description
+Struct.new 'BatchResult', :send_message, :send_metadata, :send_close,
+           :send_status, :message, :metadata, :status, :cancelled
 
 require 'core/call'
 require 'core/call_credentials'
+require 'core/call_error'
 require 'core/call_ops'
 require 'core/channel'
 require 'core/channel_credentials'
