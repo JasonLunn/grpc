@@ -35,7 +35,7 @@ require_relative '../platform_check'
 plugin_name = 'grpc_ruby_plugin' + RbConfig::CONFIG['EXEEXT']
 
 plugin_path = File.join(File.dirname(__FILE__),
-                        PLATFORM.architecture + '-' + PLATFORM.os_name,
+                        GRPC_PLATFORM.architecture + '-' + GRPC_PLATFORM.os_name,
                         plugin_name)
 
 exec([ plugin_path, plugin_path ], *ARGV)

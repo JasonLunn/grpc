@@ -39,7 +39,7 @@ protoc_name = 'protoc' + ext
 plugin_name = 'grpc_ruby_plugin' + ext
 
 protoc_dir = File.join(File.dirname(__FILE__),
-                       PLATFORM.architecture + '-' + PLATFORM.os_name)
+                       GRPC_PLATFORM.architecture + '-' + GRPC_PLATFORM.os_name)
 
 protoc_path = File.join(protoc_dir, protoc_name)
 
