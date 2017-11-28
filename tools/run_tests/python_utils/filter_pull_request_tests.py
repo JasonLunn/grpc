@@ -1,32 +1,17 @@
 #!/usr/bin/env python
-# Copyright 2015, Google Inc.
-# All rights reserved.
+# Copyright 2015 gRPC authors.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are
-# met:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#     * Redistributions of source code must retain the above copyright
-# notice, this list of conditions and the following disclaimer.
-#     * Redistributions in binary form must reproduce the above
-# copyright notice, this list of conditions and the following disclaimer
-# in the documentation and/or other materials provided with the
-# distribution.
-#     * Neither the name of Google Inc. nor the names of its
-# contributors may be used to endorse or promote products derived from
-# this software without specific prior written permission.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Filter out tests based on file differences compared to merge target branch"""
 
@@ -62,7 +47,7 @@ class TestSuite:
 _CORE_TEST_SUITE = TestSuite(['c'])
 _CPP_TEST_SUITE = TestSuite(['c++'])
 _CSHARP_TEST_SUITE = TestSuite(['csharp'])
-_NODE_TEST_SUITE = TestSuite(['node'])
+_NODE_TEST_SUITE = TestSuite(['grpc-node'])
 _OBJC_TEST_SUITE = TestSuite(['objc'])
 _PHP_TEST_SUITE = TestSuite(['php', 'php7'])
 _PYTHON_TEST_SUITE = TestSuite(['python'])
@@ -87,23 +72,19 @@ _WHITELIST_DICT = {
   '^summerofcode/': [],
   '^src/cpp/': [_CPP_TEST_SUITE],
   '^src/csharp/': [_CSHARP_TEST_SUITE],
-  '^src/node/': [_NODE_TEST_SUITE],
   '^src/objective\-c/': [_OBJC_TEST_SUITE],
   '^src/php/': [_PHP_TEST_SUITE],
   '^src/python/': [_PYTHON_TEST_SUITE],
   '^src/ruby/': [_RUBY_TEST_SUITE],
   '^templates/': [],
-  '^test/core/': [_CORE_TEST_SUITE],
+  '^test/core/': [_CORE_TEST_SUITE, _CPP_TEST_SUITE],
   '^test/cpp/': [_CPP_TEST_SUITE],
   '^test/distrib/cpp/': [_CPP_TEST_SUITE],
   '^test/distrib/csharp/': [_CSHARP_TEST_SUITE],
-  '^test/distrib/node/': [_NODE_TEST_SUITE],
   '^test/distrib/php/': [_PHP_TEST_SUITE],
   '^test/distrib/python/': [_PYTHON_TEST_SUITE],
   '^test/distrib/ruby/': [_RUBY_TEST_SUITE],
-  '^tools/internal_ci/': [],
   '^vsprojects/': [_WINDOWS_TEST_SUITE],
-  'binding\.gyp$': [_NODE_TEST_SUITE],
   'composer\.json$': [_PHP_TEST_SUITE],
   'config\.m4$': [_PHP_TEST_SUITE],
   'CONTRIBUTING\.md$': [],
@@ -127,6 +108,9 @@ _WHITELIST_DICT = {
   'setup\.py$': [_PYTHON_TEST_SUITE]
 }
 
+# Regex that combines all keys in _WHITELIST_DICT
+_ALL_TRIGGERS = "(" + ")|(".join(_WHITELIST_DICT.keys()) + ")"
+
 # Add all triggers to their respective test suites
 for trigger, test_suites in six.iteritems(_WHITELIST_DICT):
   for test_suite in test_suites:
@@ -140,7 +124,7 @@ def _get_changed_files(base_branch):
   # Get file changes between branch and merge-base of specified branch
   # Not combined to be Windows friendly
   base_commit = check_output(["git", "merge-base", base_branch, "HEAD"]).rstrip()
-  return check_output(["git", "diff", base_commit, "--name-only"]).splitlines()
+  return check_output(["git", "diff", base_commit, "--name-only", "HEAD"]).splitlines()
 
 
 def _can_skip_tests(file_names, triggers):
@@ -169,6 +153,21 @@ def _remove_irrelevant_tests(tests, skippable_labels):
           test.labels[2] not in skippable_labels]
 
 
+def affects_c_cpp(base_branch):
+  """
+  Determines if a pull request's changes affect C/C++. This function exists because
+  there are pull request tests that only test C/C++ code
+  :param base_branch: branch that a pull request is requesting to merge into
+  :return: boolean indicating whether C/C++ changes are made in pull request
+  """
+  changed_files = _get_changed_files(base_branch)
+  # Run all tests if any changed file is not in the whitelist dictionary
+  for changed_file in changed_files:
+    if not re.match(_ALL_TRIGGERS, changed_file):
+      return True
+  return not _can_skip_tests(changed_files, _CPP_TEST_SUITE.triggers + _CORE_TEST_SUITE.triggers)
+
+
 def filter_tests(tests, base_branch):
   """
   Filters out tests that are safe to ignore
@@ -181,11 +180,9 @@ def filter_tests(tests, base_branch):
     print('  %s' % changed_file)
   print('')
 
-  # Regex that combines all keys in _WHITELIST_DICT
-  all_triggers = "(" + ")|(".join(_WHITELIST_DICT.keys()) + ")"
-  # Check if all tests have to be run
+  # Run all tests if any changed file is not in the whitelist dictionary
   for changed_file in changed_files:
-    if not re.match(all_triggers, changed_file):
+    if not re.match(_ALL_TRIGGERS, changed_file):
       return(tests)
   # Figure out which language and platform tests to run
   skippable_labels = []
@@ -196,4 +193,3 @@ def filter_tests(tests, base_branch):
         skippable_labels.append(label)
   tests = _remove_irrelevant_tests(tests, skippable_labels)
   return tests
-

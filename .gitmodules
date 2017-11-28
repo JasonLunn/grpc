@@ -14,9 +14,6 @@
 [submodule "third_party/boringssl"]
 	path = third_party/boringssl
 	url = https://github.com/google/boringssl.git
-[submodule "third_party/thrift"]
-	path = third_party/thrift
-	url = https://github.com/apache/thrift.git
 [submodule "third_party/benchmark"]
 	path = third_party/benchmark
 	url = https://github.com/google/benchmark
@@ -27,3 +24,9 @@
 	path = third_party/cares/cares
 	url = https://github.com/c-ares/c-ares.git
 	branch = cares-1_12_0
+[submodule "third_party/bloaty"]
+	path = third_party/bloaty
+	url = https://github.com/google/bloaty.git
+[submodule "third_party/abseil-cpp"]
+	path = third_party/abseil-cpp
+	url = https://github.com/abseil/abseil-cpp

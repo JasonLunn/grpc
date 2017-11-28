@@ -1,33 +1,18 @@
 /*
  *
- * Copyright 2016, Google Inc.
- * All rights reserved.
+ * Copyright 2016 gRPC authors.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of Google Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  */
 
@@ -73,6 +58,11 @@ DEFINE_string(protofiles, "", "Name of the proto file.");
 DEFINE_bool(binary_input, false, "Input in binary format");
 DEFINE_bool(binary_output, false, "Output in binary format");
 DEFINE_string(infile, "", "Input file (default is stdin)");
+DEFINE_bool(batch, false,
+            "Input contains multiple requests. Please do not use this to send "
+            "more than a few RPCs. gRPC CLI has very different performance "
+            "characteristics compared with normal RPC calls which make it "
+            "unsuitable for loadtesting or significant production traffic.");
 
 namespace {
 
@@ -240,7 +230,7 @@ const Command* FindCommand(const grpc::string& name) {
       return &ops[i];
     }
   }
-  return NULL;
+  return nullptr;
 }
 }  // namespace
 
@@ -255,13 +245,13 @@ int GrpcToolMainLib(int argc, const char** argv, const CliCredentials& cred,
   argv += 2;
 
   const Command* cmd = FindCommand(command);
-  if (cmd != NULL) {
+  if (cmd != nullptr) {
     GrpcTool grpc_tool;
     if (argc < cmd->min_args || argc > cmd->max_args) {
       // Force the command to print its usage message
       fprintf(stderr, "\nWrong number of arguments for %s\n", command.c_str());
       grpc_tool.SetPrintCommandMode(1);
-      return cmd->function(&grpc_tool, -1, NULL, cred, callback);
+      return cmd->function(&grpc_tool, -1, nullptr, cred, callback);
     }
     const bool ok = cmd->function(&grpc_tool, argc, argv, cred, callback);
     return ok ? 0 : 1;
@@ -291,11 +281,11 @@ bool GrpcTool::Help(int argc, const char** argv, const CliCredentials& cred,
     Usage("");
   } else {
     const Command* cmd = FindCommand(argv[0]);
-    if (cmd == NULL) {
+    if (cmd == nullptr) {
       Usage("Unknown command '" + grpc::string(argv[0]) + "'");
     }
     SetPrintCommandMode(0);
-    cmd->function(this, -1, NULL, cred, callback);
+    cmd->function(this, -1, nullptr, cred, callback);
   }
   return true;
 }
@@ -321,6 +311,7 @@ bool GrpcTool::ListServices(int argc, const char** argv,
 
   std::vector<grpc::string> service_list;
   if (!desc_db.GetServices(&service_list)) {
+    fprintf(stderr, "Received an error when querying services endpoint.\n");
     return false;
   }
 
@@ -459,12 +450,10 @@ bool GrpcTool::CallMethod(int argc, const char** argv,
   bool print_mode = false;
 
   std::shared_ptr<grpc::Channel> channel =
-      FLAGS_remotedb
-          ? grpc::CreateChannel(server_address, cred.GetCredentials())
-          : nullptr;
+      grpc::CreateChannel(server_address, cred.GetCredentials());
 
-  parser.reset(new grpc::testing::ProtoFileParser(channel, FLAGS_proto_path,
-                                                  FLAGS_protofiles));
+  parser.reset(new grpc::testing::ProtoFileParser(
+      FLAGS_remotedb ? channel : nullptr, FLAGS_proto_path, FLAGS_protofiles));
 
   if (FLAGS_binary_input) {
     formatted_method_name = method_name;
@@ -476,12 +465,17 @@ bool GrpcTool::CallMethod(int argc, const char** argv,
     return false;
   }
 
+  if (argc == 3) {
+    request_text = argv[2];
+  }
+
   if (parser->IsStreaming(method_name, true /* is_request */)) {
     std::istream* input_stream;
     std::ifstream input_file;
 
-    if (argc == 3) {
-      request_text = argv[2];
+    if (FLAGS_batch) {
+      fprintf(stderr, "Batch mode for streaming RPC is not supported.\n");
+      return false;
     }
 
     std::multimap<grpc::string, grpc::string> client_metadata;
@@ -565,8 +559,115 @@ bool GrpcTool::CallMethod(int argc, const char** argv,
     }
 
   } else {  // parser->IsStreaming(method_name, true /* is_request */)
+    if (FLAGS_batch) {
+      if (parser->IsStreaming(method_name, false /* is_request */)) {
+        fprintf(stderr, "Batch mode for streaming RPC is not supported.\n");
+        return false;
+      }
+
+      std::istream* input_stream;
+      std::ifstream input_file;
+
+      if (FLAGS_infile.empty()) {
+        if (isatty(fileno(stdin))) {
+          print_mode = true;
+          fprintf(stderr, "reading request messages from stdin...\n");
+        }
+        input_stream = &std::cin;
+      } else {
+        input_file.open(FLAGS_infile, std::ios::in | std::ios::binary);
+        input_stream = &input_file;
+      }
+
+      std::multimap<grpc::string, grpc::string> client_metadata;
+      ParseMetadataFlag(&client_metadata);
+      if (print_mode) {
+        PrintMetadata(client_metadata, "Sending client initial metadata:");
+      }
+
+      std::stringstream request_ss;
+      grpc::string line;
+      while (!request_text.empty() ||
+             (!input_stream->eof() && getline(*input_stream, line))) {
+        if (!request_text.empty()) {
+          if (FLAGS_binary_input) {
+            serialized_request_proto = request_text;
+            request_text.clear();
+          } else {
+            serialized_request_proto = parser->GetSerializedProtoFromMethod(
+                method_name, request_text, true /* is_request */);
+            request_text.clear();
+            if (parser->HasError()) {
+              if (print_mode) {
+                fprintf(stderr, "Failed to parse request.\n");
+              }
+              continue;
+            }
+          }
+
+          grpc::string serialized_response_proto;
+          std::multimap<grpc::string_ref, grpc::string_ref>
+              server_initial_metadata, server_trailing_metadata;
+          CliCall call(channel, formatted_method_name, client_metadata);
+          call.Write(serialized_request_proto);
+          call.WritesDone();
+          if (!call.Read(&serialized_response_proto,
+                         &server_initial_metadata)) {
+            fprintf(stderr, "Failed to read response.\n");
+          }
+          Status status = call.Finish(&server_trailing_metadata);
+
+          if (status.ok()) {
+            if (print_mode) {
+              fprintf(stderr, "Rpc succeeded with OK status.\n");
+              PrintMetadata(server_initial_metadata,
+                            "Received initial metadata from server:");
+              PrintMetadata(server_trailing_metadata,
+                            "Received trailing metadata from server:");
+            }
+
+            if (FLAGS_binary_output) {
+              if (!callback(serialized_response_proto)) {
+                break;
+              }
+            } else {
+              grpc::string response_text = parser->GetTextFormatFromMethod(
+                  method_name, serialized_response_proto,
+                  false /* is_request */);
+              if (parser->HasError() && print_mode) {
+                fprintf(stderr, "Failed to parse response.\n");
+              } else {
+                if (!callback(response_text)) {
+                  break;
+                }
+              }
+            }
+          } else {
+            if (print_mode) {
+              fprintf(stderr,
+                      "Rpc failed with status code %d, error message: %s\n",
+                      status.error_code(), status.error_message().c_str());
+            }
+          }
+        } else {
+          if (line.length() == 0) {
+            request_text = request_ss.str();
+            request_ss.str(grpc::string());
+            request_ss.clear();
+          } else {
+            request_ss << line << ' ';
+          }
+        }
+      }
+
+      if (input_file.is_open()) {
+        input_file.close();
+      }
+
+      return true;
+    }
+
     if (argc == 3) {
-      request_text = argv[2];
       if (!FLAGS_infile.empty()) {
         fprintf(stderr, "warning: request given in argv, ignoring --infile\n");
       }
@@ -587,9 +688,7 @@ bool GrpcTool::CallMethod(int argc, const char** argv,
 
     if (FLAGS_binary_input) {
       serialized_request_proto = request_text;
-      // formatted_method_name = method_name;
     } else {
-      // formatted_method_name = parser->GetFormattedMethodName(method_name);
       serialized_request_proto = parser->GetSerializedProtoFromMethod(
           method_name, request_text, true /* is_request */);
       if (parser->HasError()) {

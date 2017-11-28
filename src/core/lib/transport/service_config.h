@@ -1,32 +1,17 @@
 //
-// Copyright 2016, Google Inc.
-// All rights reserved.
+// Copyright 2016 gRPC authors.
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//     * Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//     * Redistributions in binary form must reproduce the above
-// copyright notice, this list of conditions and the following disclaimer
-// in the documentation and/or other materials provided with the
-// distribution.
-//     * Neither the name of Google Inc. nor the names of its
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 #ifndef GRPC_CORE_LIB_TRANSPORT_SERVICE_CONFIG_H
@@ -36,6 +21,10 @@
 
 #include "src/core/lib/json/json.h"
 #include "src/core/lib/slice/slice_hash_table.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct grpc_service_config grpc_service_config;
 
@@ -57,12 +46,13 @@ const char* grpc_service_config_get_lb_policy_name(
 /// Creates a method config table based on the data in \a json.
 /// The table's keys are request paths.  The table's value type is
 /// returned by \a create_value(), based on data parsed from the JSON tree.
-/// \a vtable provides methods used to manage the values.
+/// \a ref_value() and \a unref_value() are used to ref and unref values.
 /// Returns NULL on error.
 grpc_slice_hash_table* grpc_service_config_create_method_config_table(
     grpc_exec_ctx* exec_ctx, const grpc_service_config* service_config,
     void* (*create_value)(const grpc_json* method_config_json),
-    const grpc_slice_hash_table_vtable* vtable);
+    void* (*ref_value)(void* value),
+    void (*unref_value)(grpc_exec_ctx* exec_ctx, void* value));
 
 /// A helper function for looking up values in the table returned by
 /// \a grpc_service_config_create_method_config_table().
@@ -73,5 +63,9 @@ grpc_slice_hash_table* grpc_service_config_create_method_config_table(
 void* grpc_method_config_table_get(grpc_exec_ctx* exec_ctx,
                                    const grpc_slice_hash_table* table,
                                    grpc_slice path);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GRPC_CORE_LIB_TRANSPORT_SERVICE_CONFIG_H */

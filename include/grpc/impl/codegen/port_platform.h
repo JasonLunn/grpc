@@ -1,33 +1,18 @@
 /*
  *
- * Copyright 2015, Google Inc.
- * All rights reserved.
+ * Copyright 2015 gRPC authors.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of Google Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  */
 
@@ -157,7 +142,6 @@
 #define GPR_GETPID_IN_UNISTD_H 1
 #define GPR_SUPPORT_CHANNELS_FROM_FD 1
 #elif defined(__linux__)
-#define GPR_POSIX_CRASH_HANDLER 1
 #define GPR_PLATFORM_STRING "linux"
 #ifndef _BSD_SOURCE
 #define _BSD_SOURCE
@@ -187,6 +171,11 @@
 #else /* _LP64 */
 #define GPR_ARCH_32 1
 #endif /* _LP64 */
+#ifdef __GLIBC__
+#define GPR_POSIX_CRASH_HANDLER 1
+#else /* musl libc */
+#define GPR_MUSL_LIBC_COMPAT 1
+#endif
 #elif defined(__APPLE__)
 #include <Availability.h>
 #include <TargetConditionals.h>
@@ -194,7 +183,6 @@
 #define _BSD_SOURCE
 #endif
 #if TARGET_OS_IPHONE
-#define GPR_FORBID_UNREACHABLE_CODE 1
 #define GPR_PLATFORM_STRING "ios"
 #define GPR_CPU_IPHONE 1
 #define GPR_PTHREAD_TLS 1
@@ -253,6 +241,29 @@
 #else /* _LP64 */
 #define GPR_ARCH_32 1
 #endif /* _LP64 */
+#elif defined(__OpenBSD__)
+#define GPR_PLATFORM_STRING "openbsd"
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+#define GPR_OPENBSD 1
+#define GPR_CPU_POSIX 1
+#define GPR_GCC_ATOMIC 1
+#define GPR_GCC_TLS 1
+#define GPR_POSIX_LOG 1
+#define GPR_POSIX_ENV 1
+#define GPR_POSIX_TMPFILE 1
+#define GPR_POSIX_STRING 1
+#define GPR_POSIX_SUBPROCESS 1
+#define GPR_POSIX_SYNC 1
+#define GPR_POSIX_TIME 1
+#define GPR_GETPID_IN_UNISTD_H 1
+#define GPR_SUPPORT_CHANNELS_FROM_FD 1
+#ifdef _LP64
+#define GPR_ARCH_64 1
+#else /* _LP64 */
+#define GPR_ARCH_32 1
+#endif /* _LP64 */
 #elif defined(__native_client__)
 #define GPR_PLATFORM_STRING "nacl"
 #ifndef _BSD_SOURCE
@@ -286,6 +297,33 @@
 #endif
 #endif /* GPR_NO_AUTODETECT_PLATFORM */
 
+/*
+ *  There are platforms for which TLS should not be used even though the
+ * compiler makes it seem like it's supported (Android NDK < r12b for example).
+ * This is primarily because of linker problems and toolchain misconfiguration:
+ * TLS isn't supported until NDK r12b per
+ * https://developer.android.com/ndk/downloads/revision_history.html
+ * Since NDK r16, `__NDK_MAJOR__` and `__NDK_MINOR__` are defined in
+ * <android/ndk-version.h>. For NDK < r16, users should define these macros,
+ * e.g. `-D__NDK_MAJOR__=11 -D__NKD_MINOR__=0` for NDK r11. */
+#if defined(__ANDROID__) && defined(__clang__) && defined(GPR_GCC_TLS)
+#if __has_include(<android/ndk-version.h>)
+#include <android/ndk-version.h>
+#endif /* __has_include(<android/ndk-version.h>) */
+#if defined(__ANDROID__) && defined(__clang__) && defined(__NDK_MAJOR__) && \
+    defined(__NDK_MINOR__) &&                                               \
+    ((__NDK_MAJOR__ < 12) || ((__NDK_MAJOR__ == 12) && (__NDK_MINOR__ < 1)))
+#undef GPR_GCC_TLS
+#define GPR_PTHREAD_TLS 1
+#endif
+#endif /*defined(__ANDROID__) && defined(__clang__) && defined(GPR_GCC_TLS) */
+
+#if defined(__has_include)
+#if __has_include(<atomic>)
+#define GRPC_HAS_CXX11_ATOMIC
+#endif /* __has_include(<atomic>) */
+#endif /* defined(__has_include) */
+
 #ifndef GPR_PLATFORM_STRING
 #warning "GPR_PLATFORM_STRING not auto-detected"
 #define GPR_PLATFORM_STRING "unknown"
@@ -297,10 +335,6 @@
 #endif
 
 #ifdef _MSC_VER
-#ifdef _PYTHON_MSVC
-// The Python 3.5 Windows runtime is missing InetNtop
-#define GPR_WIN_INET_NTOP
-#endif  // _PYTHON_MSVC
 #if _MSC_VER < 1700
 typedef __int8 int8_t;
 typedef __int16 int16_t;
@@ -375,8 +409,10 @@ typedef unsigned __int64 uint64_t;
 #ifndef GRPC_MUST_USE_RESULT
 #if defined(__GNUC__) && !defined(__MINGW32__)
 #define GRPC_MUST_USE_RESULT __attribute__((warn_unused_result))
+#define GPR_ALIGN_STRUCT(n) __attribute__((aligned(n)))
 #else
 #define GRPC_MUST_USE_RESULT
+#define GPR_ALIGN_STRUCT(n)
 #endif
 #endif
 
@@ -410,6 +446,21 @@ typedef unsigned __int64 uint64_t;
 
 #ifndef CENSUSAPI
 #define CENSUSAPI GRPCAPI
+#endif
+
+#ifndef GPR_ATTRIBUTE_NO_TSAN /* (1) */
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define GPR_ATTRIBUTE_NO_TSAN __attribute__((no_sanitize("thread")))
+#endif                        /* __has_feature(thread_sanitizer) */
+#endif                        /* defined(__has_feature) */
+#ifndef GPR_ATTRIBUTE_NO_TSAN /* (2) */
+#define GPR_ATTRIBUTE_NO_TSAN
+#endif /* GPR_ATTRIBUTE_NO_TSAN (2) */
+#endif /* GPR_ATTRIBUTE_NO_TSAN (1) */
+
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
 #endif
 
 #endif /* GRPC_IMPL_CODEGEN_PORT_PLATFORM_H */

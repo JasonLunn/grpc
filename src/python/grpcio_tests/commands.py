@@ -1,31 +1,16 @@
-# Copyright 2015, Google Inc.
-# All rights reserved.
+# Copyright 2015 gRPC authors.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are
-# met:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#     * Redistributions of source code must retain the above copyright
-# notice, this list of conditions and the following disclaimer.
-#     * Redistributions in binary form must reproduce the above
-# copyright notice, this list of conditions and the following disclaimer
-# in the documentation and/or other materials provided with the
-# distribution.
-#     * Neither the name of Google Inc. nor the names of its
-# contributors may be used to endorse or promote products derived from
-# this software without specific prior written permission.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Provides distutils command classes for the gRPC Python setup process."""
 
 from distutils import errors as _errors
@@ -79,55 +64,6 @@ class GatherProto(setuptools.Command):
         shutil.copytree(GRPC_PROTO_STEM, PROTO_STEM)
         for root, _, _ in os.walk(PYTHON_PROTO_TOP_LEVEL):
             path = os.path.join(root, '__init__.py')
-            open(path, 'a').close()
-
-
-class BuildProtoModules(setuptools.Command):
-    """Command to generate project *_pb2.py modules from proto files."""
-
-    description = 'build protobuf modules'
-    user_options = [
-        ('include=', None, 'path patterns to include in protobuf generation'),
-        ('exclude=', None, 'path patterns to exclude from protobuf generation')
-    ]
-
-    def initialize_options(self):
-        self.exclude = None
-        self.include = r'.*\.proto$'
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        import grpc_tools.protoc as protoc
-
-        include_regex = re.compile(self.include)
-        exclude_regex = re.compile(self.exclude) if self.exclude else None
-        paths = []
-        for walk_root, directories, filenames in os.walk(PROTO_STEM):
-            for filename in filenames:
-                path = os.path.join(walk_root, filename)
-                if include_regex.match(path) and not (
-                        exclude_regex and exclude_regex.match(path)):
-                    paths.append(path)
-
-        # TODO(kpayson): It would be nice to do this in a batch command,
-        # but we currently have name conflicts in src/proto
-        for path in paths:
-            command = [
-                'grpc_tools.protoc',
-                '-I {}'.format(PROTO_STEM),
-                '--python_out={}'.format(PROTO_STEM),
-                '--grpc_python_out={}'.format(PROTO_STEM),
-            ] + [path]
-            if protoc.main(command) != 0:
-                sys.stderr.write(
-                    'warning: Command:\n{}\nFailed'.format(command))
-
-        # Generated proto directories dont include __init__.py, but
-        # these are needed for python package resolution
-        for walk_root, _, _ in os.walk(PROTO_STEM):
-            path = os.path.join(walk_root, '__init__.py')
             open(path, 'a').close()
 
 

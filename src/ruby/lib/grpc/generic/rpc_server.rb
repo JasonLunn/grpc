@@ -1,31 +1,16 @@
-# Copyright 2015, Google Inc.
-# All rights reserved.
+# Copyright 2015 gRPC authors.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are
-# met:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#     * Redistributions of source code must retain the above copyright
-# notice, this list of conditions and the following disclaimer.
-#     * Redistributions in binary form must reproduce the above
-# copyright notice, this list of conditions and the following disclaimer
-# in the documentation and/or other materials provided with the
-# distribution.
-#     * Neither the name of Google Inc. nor the names of its
-# contributors may be used to endorse or promote products derived from
-# this software without specific prior written permission.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 require_relative '../grpc'
 require_relative 'active_call'
@@ -211,11 +196,18 @@ module GRPC
     #
     # * server_args:
     # A server arguments hash to be passed down to the underlying core server
+    #
+    # * interceptors:
+    # Am array of GRPC::ServerInterceptor objects that will be used for
+    # intercepting server handlers to provide extra functionality.
+    # Interceptors are an EXPERIMENTAL API.
+    #
     def initialize(pool_size:DEFAULT_POOL_SIZE,
                    max_waiting_requests:DEFAULT_MAX_WAITING_REQUESTS,
                    poll_period:DEFAULT_POLL_PERIOD,
                    connect_md_proc:nil,
-                   server_args:{})
+                   server_args:{},
+                   interceptors:[])
       @connect_md_proc = RpcServer.setup_connect_md_proc(connect_md_proc)
       @max_waiting_requests = max_waiting_requests
       @poll_period = poll_period
@@ -227,6 +219,7 @@ module GRPC
       # :stopped. State transitions can only proceed in that order.
       @running_state = :not_started
       @server = Core::Server.new(server_args)
+      @interceptors = InterceptorRegistry.new(interceptors)
     end
 
     # stops a running server
@@ -389,7 +382,11 @@ module GRPC
             @pool.schedule(active_call) do |ac|
               c, mth = ac
               begin
-                rpc_descs[mth].run_server_method(c, rpc_handlers[mth])
+                rpc_descs[mth].run_server_method(
+                  c,
+                  rpc_handlers[mth],
+                  @interceptors.build_context
+                )
               rescue StandardError
                 c.send_status(GRPC::Core::StatusCodes::INTERNAL,
                               'Server handler failed')
@@ -397,7 +394,7 @@ module GRPC
             end
           end
         rescue Core::CallError, RuntimeError => e
-          # these might happen for various reasonse.  The correct behaviour of
+          # these might happen for various reasons.  The correct behavior of
           # the server is to log them and continue, if it's not shutting down.
           if running_state == :running
             GRPC.logger.warn("server call failed: #{e}")
@@ -433,6 +430,7 @@ module GRPC
                          metadata_received: true,
                          started: false,
                          metadata_to_send: connect_md)
+      c.attach_peer_cert(an_rpc.call.peer_cert)
       mth = an_rpc.method.to_sym
       [c, mth]
     end

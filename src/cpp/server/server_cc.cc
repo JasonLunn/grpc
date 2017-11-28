@@ -1,37 +1,23 @@
 /*
- * Copyright 2015, Google Inc.
- * All rights reserved.
+ * Copyright 2015 gRPC authors.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of Google Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  */
 
 #include <grpc++/server.h>
 
+#include <cstdlib>
 #include <sstream>
 #include <utility>
 
@@ -51,7 +37,10 @@
 #include <grpc/support/alloc.h>
 #include <grpc/support/log.h>
 
+#include "src/core/ext/transport/inproc/inproc_transport.h"
 #include "src/core/lib/profiling/timers.h"
+#include "src/core/lib/surface/call.h"
+#include "src/cpp/client/create_channel_internal.h"
 #include "src/cpp/server/health/default_health_check_service.h"
 #include "src/cpp/thread_manager/thread_manager.h"
 
@@ -87,7 +76,7 @@ class Server::UnimplementedAsyncRequest final
  public:
   UnimplementedAsyncRequest(Server* server, ServerCompletionQueue* cq)
       : GenericAsyncRequest(server, &server_context_, &generic_stream_, cq, cq,
-                            NULL, false),
+                            nullptr, false),
         server_(server),
         cq_(cq) {}
 
@@ -101,7 +90,8 @@ class Server::UnimplementedAsyncRequest final
   ServerCompletionQueue* const cq_;
 };
 
-typedef SneakyCallOpSet<CallOpSendInitialMetadata, CallOpServerSendStatus>
+typedef internal::SneakyCallOpSet<internal::CallOpSendInitialMetadata,
+                                  internal::CallOpServerSendStatus>
     UnimplementedAsyncResponseOp;
 class Server::UnimplementedAsyncResponse final
     : public UnimplementedAsyncResponseOp {
@@ -119,20 +109,28 @@ class Server::UnimplementedAsyncResponse final
   UnimplementedAsyncRequest* const request_;
 };
 
-class ShutdownTag : public CompletionQueueTag {
+class ShutdownTag : public internal::CompletionQueueTag {
  public:
   bool FinalizeResult(void** tag, bool* status) { return false; }
 };
 
-class Server::SyncRequest final : public CompletionQueueTag {
+class DummyTag : public internal::CompletionQueueTag {
  public:
-  SyncRequest(RpcServiceMethod* method, void* tag)
+  bool FinalizeResult(void** tag, bool* status) {
+    *status = true;
+    return true;
+  }
+};
+
+class Server::SyncRequest final : public internal::CompletionQueueTag {
+ public:
+  SyncRequest(internal::RpcServiceMethod* method, void* tag)
       : method_(method),
         tag_(tag),
         in_flight_(false),
-        has_request_payload_(method->method_type() == RpcMethod::NORMAL_RPC ||
-                             method->method_type() ==
-                                 RpcMethod::SERVER_STREAMING),
+        has_request_payload_(
+            method->method_type() == internal::RpcMethod::NORMAL_RPC ||
+            method->method_type() == internal::RpcMethod::SERVER_STREAMING),
         call_details_(nullptr),
         cq_(nullptr) {
     grpc_metadata_array_init(&request_metadata_);
@@ -145,7 +143,7 @@ class Server::SyncRequest final : public CompletionQueueTag {
     grpc_metadata_array_destroy(&request_metadata_);
   }
 
-  void SetupRequest() { cq_ = grpc_completion_queue_create(nullptr); }
+  void SetupRequest() { cq_ = grpc_completion_queue_create_for_pluck(nullptr); }
 
   void TeardownRequest() {
     grpc_completion_queue_destroy(cq_);
@@ -156,19 +154,25 @@ class Server::SyncRequest final : public CompletionQueueTag {
     GPR_ASSERT(cq_ && !in_flight_);
     in_flight_ = true;
     if (tag_) {
-      GPR_ASSERT(GRPC_CALL_OK ==
-                 grpc_server_request_registered_call(
-                     server, tag_, &call_, &deadline_, &request_metadata_,
-                     has_request_payload_ ? &request_payload_ : nullptr, cq_,
-                     notify_cq, this));
+      if (GRPC_CALL_OK !=
+          grpc_server_request_registered_call(
+              server, tag_, &call_, &deadline_, &request_metadata_,
+              has_request_payload_ ? &request_payload_ : nullptr, cq_,
+              notify_cq, this)) {
+        TeardownRequest();
+        return;
+      }
     } else {
       if (!call_details_) {
         call_details_ = new grpc_call_details;
         grpc_call_details_init(call_details_);
       }
-      GPR_ASSERT(GRPC_CALL_OK == grpc_server_request_call(
-                                     server, &call_, call_details_,
-                                     &request_metadata_, cq_, notify_cq, this));
+      if (grpc_server_request_call(server, &call_, call_details_,
+                                   &request_metadata_, cq_, notify_cq,
+                                   this) != GRPC_CALL_OK) {
+        TeardownRequest();
+        return;
+      }
     }
   }
 
@@ -209,27 +213,32 @@ class Server::SyncRequest final : public CompletionQueueTag {
     void Run(std::shared_ptr<GlobalCallbacks> global_callbacks) {
       ctx_.BeginCompletionOp(&call_);
       global_callbacks->PreSynchronousRequest(&ctx_);
-      method_->handler()->RunHandler(
-          MethodHandler::HandlerParameter(&call_, &ctx_, request_payload_));
+      method_->handler()->RunHandler(internal::MethodHandler::HandlerParameter(
+          &call_, &ctx_, request_payload_));
       global_callbacks->PostSynchronousRequest(&ctx_);
       request_payload_ = nullptr;
-      void* ignored_tag;
-      bool ignored_ok;
+
       cq_.Shutdown();
-      GPR_ASSERT(cq_.Next(&ignored_tag, &ignored_ok) == false);
+
+      internal::CompletionQueueTag* op_tag = ctx_.GetCompletionOpTag();
+      cq_.TryPluck(op_tag, gpr_inf_future(GPR_CLOCK_REALTIME));
+
+      /* Ensure the cq_ is shutdown */
+      DummyTag ignored_tag;
+      GPR_ASSERT(cq_.Pluck(&ignored_tag) == false);
     }
 
    private:
     CompletionQueue cq_;
-    Call call_;
+    internal::Call call_;
     ServerContext ctx_;
     const bool has_request_payload_;
     grpc_byte_buffer* request_payload_;
-    RpcServiceMethod* const method_;
+    internal::RpcServiceMethod* const method_;
   };
 
  private:
-  RpcServiceMethod* const method_;
+  internal::RpcServiceMethod* const method_;
   void* const tag_;
   bool in_flight_;
   const bool has_request_payload_;
@@ -258,8 +267,11 @@ class Server::SyncRequestThreadManager : public ThreadManager {
 
   WorkStatus PollForWork(void** tag, bool* ok) override {
     *tag = nullptr;
+    // TODO(ctiller): workaround for GPR_TIMESPAN based deadlines not working
+    // right now
     gpr_timespec deadline =
-        gpr_time_from_millis(cq_timeout_msec_, GPR_TIMESPAN);
+        gpr_time_add(gpr_now(GPR_CLOCK_MONOTONIC),
+                     gpr_time_from_millis(cq_timeout_msec_, GPR_TIMESPAN));
 
     switch (server_cq_->AsyncNext(tag, ok, deadline)) {
       case CompletionQueue::TIMEOUT:
@@ -286,12 +298,10 @@ class Server::SyncRequestThreadManager : public ThreadManager {
     if (ok) {
       // Calldata takes ownership of the completion queue inside sync_req
       SyncRequest::CallData cd(server_, sync_req);
-      {
-        // Prepare for the next request
-        if (!IsShutdown()) {
-          sync_req->SetupRequest();  // Create new completion queue for sync_req
-          sync_req->Request(server_->c_server(), server_cq_->cq());
-        }
+      // Prepare for the next request
+      if (!IsShutdown()) {
+        sync_req->SetupRequest();  // Create new completion queue for sync_req
+        sync_req->Request(server_->c_server(), server_cq_->cq());
       }
 
       GPR_TIMER_SCOPE("cd.Run()", 0);
@@ -302,27 +312,32 @@ class Server::SyncRequestThreadManager : public ThreadManager {
     // object
   }
 
-  void AddSyncMethod(RpcServiceMethod* method, void* tag) {
+  void AddSyncMethod(internal::RpcServiceMethod* method, void* tag) {
     sync_requests_.emplace_back(new SyncRequest(method, tag));
   }
 
   void AddUnknownSyncMethod() {
     if (!sync_requests_.empty()) {
-      unknown_method_.reset(new RpcServiceMethod(
-          "unknown", RpcMethod::BIDI_STREAMING, new UnknownMethodHandler));
+      unknown_method_.reset(new internal::RpcServiceMethod(
+          "unknown", internal::RpcMethod::BIDI_STREAMING,
+          new internal::UnknownMethodHandler));
       sync_requests_.emplace_back(
           new SyncRequest(unknown_method_.get(), nullptr));
     }
   }
 
-  void ShutdownAndDrainCompletionQueue() {
+  void Shutdown() override {
+    ThreadManager::Shutdown();
     server_cq_->Shutdown();
+  }
 
+  void Wait() override {
+    ThreadManager::Wait();
     // Drain any pending items from the queue
     void* tag;
     bool ok;
     while (server_cq_->Next(&tag, &ok)) {
-      // Nothing to be done here
+      // Do nothing
     }
   }
 
@@ -342,8 +357,8 @@ class Server::SyncRequestThreadManager : public ThreadManager {
   CompletionQueue* server_cq_;
   int cq_timeout_msec_;
   std::vector<std::unique_ptr<SyncRequest>> sync_requests_;
-  std::unique_ptr<RpcServiceMethod> unknown_method_;
-  std::unique_ptr<RpcServiceMethod> health_check_;
+  std::unique_ptr<internal::RpcServiceMethod> unknown_method_;
+  std::unique_ptr<internal::RpcServiceMethod> health_check_;
   std::shared_ptr<Server::GlobalCallbacks> global_callbacks_;
 };
 
@@ -402,7 +417,7 @@ Server::~Server() {
     } else if (!started_) {
       // Shutdown the completion queues
       for (auto it = sync_req_mgrs_.begin(); it != sync_req_mgrs_.end(); it++) {
-        (*it)->ShutdownAndDrainCompletionQueue();
+        (*it)->Shutdown();
       }
     }
   }
@@ -418,14 +433,21 @@ void Server::SetGlobalCallbacks(GlobalCallbacks* callbacks) {
 
 grpc_server* Server::c_server() { return server_; }
 
+std::shared_ptr<Channel> Server::InProcessChannel(
+    const ChannelArguments& args) {
+  grpc_channel_args channel_args = args.c_channel_args();
+  return CreateChannelInternal(
+      "inproc", grpc_inproc_channel_create(server_, &channel_args, nullptr));
+}
+
 static grpc_server_register_method_payload_handling PayloadHandlingForMethod(
-    RpcServiceMethod* method) {
+    internal::RpcServiceMethod* method) {
   switch (method->method_type()) {
-    case RpcMethod::NORMAL_RPC:
-    case RpcMethod::SERVER_STREAMING:
+    case internal::RpcMethod::NORMAL_RPC:
+    case internal::RpcMethod::SERVER_STREAMING:
       return GRPC_SRM_PAYLOAD_READ_INITIAL_BYTE_BUFFER;
-    case RpcMethod::CLIENT_STREAMING:
-    case RpcMethod::BIDI_STREAMING:
+    case internal::RpcMethod::CLIENT_STREAMING:
+    case internal::RpcMethod::BIDI_STREAMING:
       return GRPC_SRM_PAYLOAD_NONE;
   }
   GPR_UNREACHABLE_CODE(return GRPC_SRM_PAYLOAD_NONE;);
@@ -446,7 +468,7 @@ bool Server::RegisterService(const grpc::string* host, Service* service) {
       continue;
     }
 
-    RpcServiceMethod* method = it->get();
+    internal::RpcServiceMethod* method = it->get();
     void* tag = grpc_server_register_method(
         server_, method->name(), host ? host->c_str() : nullptr,
         PayloadHandlingForMethod(method), 0);
@@ -490,11 +512,11 @@ int Server::AddListeningPort(const grpc::string& addr,
                              ServerCredentials* creds) {
   GPR_ASSERT(!started_);
   int port = creds->AddPortToServer(addr, server_);
-  global_callbacks_->AddPort(this, port);
+  global_callbacks_->AddPort(this, addr, creds, port);
   return port;
 }
 
-bool Server::Start(ServerCompletionQueue** cqs, size_t num_cqs) {
+void Server::Start(ServerCompletionQueue** cqs, size_t num_cqs) {
   GPR_ASSERT(!started_);
   global_callbacks_->PreServerStart(this);
   started_ = true;
@@ -504,7 +526,7 @@ bool Server::Start(ServerCompletionQueue** cqs, size_t num_cqs) {
   if (health_check_service_ == nullptr && !health_check_service_disabled_ &&
       DefaultHealthCheckServiceEnabled()) {
     if (sync_server_cqs_->empty()) {
-      gpr_log(GPR_ERROR,
+      gpr_log(GPR_INFO,
               "Default health check service disabled at async-only server.");
     } else {
       auto* default_hc_service = new DefaultHealthCheckService;
@@ -530,8 +552,6 @@ bool Server::Start(ServerCompletionQueue** cqs, size_t num_cqs) {
   for (auto it = sync_req_mgrs_.begin(); it != sync_req_mgrs_.end(); it++) {
     (*it)->Start();
   }
-
-  return true;
 }
 
 void Server::ShutdownInternal(gpr_timespec deadline) {
@@ -568,7 +588,6 @@ void Server::ShutdownInternal(gpr_timespec deadline) {
     // Wait for threads in all ThreadManagers to terminate
     for (auto it = sync_req_mgrs_.begin(); it != sync_req_mgrs_.end(); it++) {
       (*it)->Wait();
-      (*it)->ShutdownAndDrainCompletionQueue();
     }
 
     // Drain the shutdown queue (if the previous call to AsyncNext() timed out
@@ -589,19 +608,25 @@ void Server::Wait() {
   }
 }
 
-void Server::PerformOpsOnCall(CallOpSetInterface* ops, Call* call) {
+void Server::PerformOpsOnCall(internal::CallOpSetInterface* ops,
+                              internal::Call* call) {
   static const size_t MAX_OPS = 8;
   size_t nops = 0;
   grpc_op cops[MAX_OPS];
-  ops->FillOps(cops, &nops);
+  ops->FillOps(call->call(), cops, &nops);
   auto result = grpc_call_start_batch(call->call(), cops, nops, ops, nullptr);
-  GPR_ASSERT(GRPC_CALL_OK == result);
+  if (result != GRPC_CALL_OK) {
+    gpr_log(GPR_ERROR, "Fatal: grpc_call_start_batch returned %d", result);
+    grpc_call_log_batch(__FILE__, __LINE__, GPR_LOG_SEVERITY_ERROR,
+                        call->call(), cops, nops, ops);
+    abort();
+  }
 }
 
 ServerInterface::BaseAsyncRequest::BaseAsyncRequest(
     ServerInterface* server, ServerContext* context,
-    ServerAsyncStreamingInterface* stream, CompletionQueue* call_cq, void* tag,
-    bool delete_on_finalize)
+    internal::ServerAsyncStreamingInterface* stream, CompletionQueue* call_cq,
+    void* tag, bool delete_on_finalize)
     : server_(server),
       context_(context),
       stream_(stream),
@@ -623,7 +648,8 @@ bool ServerInterface::BaseAsyncRequest::FinalizeResult(void** tag,
   }
   context_->set_call(call_);
   context_->cq_ = call_cq_;
-  Call call(call_, server_, call_cq_, server_->max_receive_message_size());
+  internal::Call call(call_, server_, call_cq_,
+                      server_->max_receive_message_size());
   if (*status && call_) {
     context_->BeginCompletionOp(&call);
   }
@@ -638,30 +664,33 @@ bool ServerInterface::BaseAsyncRequest::FinalizeResult(void** tag,
 
 ServerInterface::RegisteredAsyncRequest::RegisteredAsyncRequest(
     ServerInterface* server, ServerContext* context,
-    ServerAsyncStreamingInterface* stream, CompletionQueue* call_cq, void* tag)
+    internal::ServerAsyncStreamingInterface* stream, CompletionQueue* call_cq,
+    void* tag)
     : BaseAsyncRequest(server, context, stream, call_cq, tag, true) {}
 
 void ServerInterface::RegisteredAsyncRequest::IssueRequest(
     void* registered_method, grpc_byte_buffer** payload,
     ServerCompletionQueue* notification_cq) {
-  grpc_server_request_registered_call(
-      server_->server(), registered_method, &call_, &context_->deadline_,
-      context_->client_metadata_.arr(), payload, call_cq_->cq(),
-      notification_cq->cq(), this);
+  GPR_ASSERT(GRPC_CALL_OK == grpc_server_request_registered_call(
+                                 server_->server(), registered_method, &call_,
+                                 &context_->deadline_,
+                                 context_->client_metadata_.arr(), payload,
+                                 call_cq_->cq(), notification_cq->cq(), this));
 }
 
 ServerInterface::GenericAsyncRequest::GenericAsyncRequest(
     ServerInterface* server, GenericServerContext* context,
-    ServerAsyncStreamingInterface* stream, CompletionQueue* call_cq,
+    internal::ServerAsyncStreamingInterface* stream, CompletionQueue* call_cq,
     ServerCompletionQueue* notification_cq, void* tag, bool delete_on_finalize)
     : BaseAsyncRequest(server, context, stream, call_cq, tag,
                        delete_on_finalize) {
   grpc_call_details_init(&call_details_);
   GPR_ASSERT(notification_cq);
   GPR_ASSERT(call_cq);
-  grpc_server_request_call(server->server(), &call_, &call_details_,
-                           context->client_metadata_.arr(), call_cq->cq(),
-                           notification_cq->cq(), this);
+  GPR_ASSERT(GRPC_CALL_OK == grpc_server_request_call(
+                                 server->server(), &call_, &call_details_,
+                                 context->client_metadata_.arr(), call_cq->cq(),
+                                 notification_cq->cq(), this));
 }
 
 bool ServerInterface::GenericAsyncRequest::FinalizeResult(void** tag,
@@ -672,6 +701,7 @@ bool ServerInterface::GenericAsyncRequest::FinalizeResult(void** tag,
         StringFromCopiedSlice(call_details_.method);
     static_cast<GenericServerContext*>(context_)->host_ =
         StringFromCopiedSlice(call_details_.host);
+    context_->deadline_ = call_details_.deadline;
   }
   grpc_slice_unref(call_details_.method);
   grpc_slice_unref(call_details_.host);
@@ -693,7 +723,7 @@ Server::UnimplementedAsyncResponse::UnimplementedAsyncResponse(
     UnimplementedAsyncRequest* request)
     : request_(request) {
   Status status(StatusCode::UNIMPLEMENTED, "");
-  UnknownMethodHandler::FillOps(request_->context(), this);
+  internal::UnknownMethodHandler::FillOps(request_->context(), this);
   request_->stream()->call_.PerformOps(this);
 }
 

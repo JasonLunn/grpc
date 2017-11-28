@@ -1,33 +1,18 @@
 /*
  *
- * Copyright 2016, Google Inc.
- * All rights reserved.
+ * Copyright 2016 gRPC authors.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of Google Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  */
 
@@ -37,51 +22,16 @@
 
 #include "rb_grpc_imports.generated.h"
 
-grpc_raw_byte_buffer_create_type grpc_raw_byte_buffer_create_import;
-grpc_raw_compressed_byte_buffer_create_type grpc_raw_compressed_byte_buffer_create_import;
-grpc_byte_buffer_copy_type grpc_byte_buffer_copy_import;
-grpc_byte_buffer_length_type grpc_byte_buffer_length_import;
-grpc_byte_buffer_destroy_type grpc_byte_buffer_destroy_import;
-grpc_byte_buffer_reader_init_type grpc_byte_buffer_reader_init_import;
-grpc_byte_buffer_reader_destroy_type grpc_byte_buffer_reader_destroy_import;
-grpc_byte_buffer_reader_next_type grpc_byte_buffer_reader_next_import;
-grpc_byte_buffer_reader_readall_type grpc_byte_buffer_reader_readall_import;
-grpc_raw_byte_buffer_from_reader_type grpc_raw_byte_buffer_from_reader_import;
-census_initialize_type census_initialize_import;
-census_shutdown_type census_shutdown_import;
-census_supported_type census_supported_import;
-census_enabled_type census_enabled_import;
-census_context_create_type census_context_create_import;
-census_context_destroy_type census_context_destroy_import;
-census_context_get_status_type census_context_get_status_import;
-census_context_initialize_iterator_type census_context_initialize_iterator_import;
-census_context_next_tag_type census_context_next_tag_import;
-census_context_get_tag_type census_context_get_tag_import;
-census_context_encode_type census_context_encode_import;
-census_context_decode_type census_context_decode_import;
-census_trace_mask_type census_trace_mask_import;
-census_set_trace_mask_type census_set_trace_mask_import;
-census_start_rpc_op_timestamp_type census_start_rpc_op_timestamp_import;
-census_start_client_rpc_op_type census_start_client_rpc_op_import;
-census_set_rpc_client_peer_type census_set_rpc_client_peer_import;
-census_start_server_rpc_op_type census_start_server_rpc_op_import;
-census_start_op_type census_start_op_import;
-census_end_op_type census_end_op_import;
-census_trace_print_type census_trace_print_import;
-census_trace_scan_start_type census_trace_scan_start_import;
-census_get_trace_record_type census_get_trace_record_import;
-census_trace_scan_end_type census_trace_scan_end_import;
-census_define_resource_type census_define_resource_import;
-census_delete_resource_type census_delete_resource_import;
-census_resource_id_type census_resource_id_import;
-census_record_values_type census_record_values_import;
 grpc_compression_algorithm_parse_type grpc_compression_algorithm_parse_import;
 grpc_compression_algorithm_name_type grpc_compression_algorithm_name_import;
+grpc_stream_compression_algorithm_name_type grpc_stream_compression_algorithm_name_import;
 grpc_compression_algorithm_for_level_type grpc_compression_algorithm_for_level_import;
+grpc_stream_compression_algorithm_for_level_type grpc_stream_compression_algorithm_for_level_import;
 grpc_compression_options_init_type grpc_compression_options_init_import;
 grpc_compression_options_enable_algorithm_type grpc_compression_options_enable_algorithm_import;
 grpc_compression_options_disable_algorithm_type grpc_compression_options_disable_algorithm_import;
 grpc_compression_options_is_algorithm_enabled_type grpc_compression_options_is_algorithm_enabled_import;
+grpc_compression_options_is_stream_compression_algorithm_enabled_type grpc_compression_options_is_stream_compression_algorithm_enabled_import;
 grpc_metadata_array_init_type grpc_metadata_array_init_import;
 grpc_metadata_array_destroy_type grpc_metadata_array_destroy_import;
 grpc_call_details_init_type grpc_call_details_init_import;
@@ -99,18 +49,23 @@ grpc_completion_queue_next_type grpc_completion_queue_next_import;
 grpc_completion_queue_pluck_type grpc_completion_queue_pluck_import;
 grpc_completion_queue_shutdown_type grpc_completion_queue_shutdown_import;
 grpc_completion_queue_destroy_type grpc_completion_queue_destroy_import;
+grpc_completion_queue_thread_local_cache_init_type grpc_completion_queue_thread_local_cache_init_import;
+grpc_completion_queue_thread_local_cache_flush_type grpc_completion_queue_thread_local_cache_flush_import;
 grpc_alarm_create_type grpc_alarm_create_import;
+grpc_alarm_set_type grpc_alarm_set_import;
 grpc_alarm_cancel_type grpc_alarm_cancel_import;
 grpc_alarm_destroy_type grpc_alarm_destroy_import;
 grpc_channel_check_connectivity_state_type grpc_channel_check_connectivity_state_import;
+grpc_channel_num_external_connectivity_watchers_type grpc_channel_num_external_connectivity_watchers_import;
 grpc_channel_watch_connectivity_state_type grpc_channel_watch_connectivity_state_import;
+grpc_channel_support_connectivity_watcher_type grpc_channel_support_connectivity_watcher_import;
 grpc_channel_create_call_type grpc_channel_create_call_import;
 grpc_channel_ping_type grpc_channel_ping_import;
 grpc_channel_register_call_type grpc_channel_register_call_import;
 grpc_channel_create_registered_call_type grpc_channel_create_registered_call_import;
+grpc_call_arena_alloc_type grpc_call_arena_alloc_import;
 grpc_call_start_batch_type grpc_call_start_batch_import;
 grpc_call_get_peer_type grpc_call_get_peer_import;
-grpc_call_set_load_reporting_cost_context_type grpc_call_set_load_reporting_cost_context_import;
 grpc_census_call_set_context_type grpc_census_call_set_context_import;
 grpc_census_call_get_context_type grpc_census_call_get_context_import;
 grpc_channel_get_target_type grpc_channel_get_target_import;
@@ -120,13 +75,13 @@ grpc_lame_client_channel_create_type grpc_lame_client_channel_create_import;
 grpc_channel_destroy_type grpc_channel_destroy_import;
 grpc_call_cancel_type grpc_call_cancel_import;
 grpc_call_cancel_with_status_type grpc_call_cancel_with_status_import;
-grpc_call_destroy_type grpc_call_destroy_import;
+grpc_call_ref_type grpc_call_ref_import;
+grpc_call_unref_type grpc_call_unref_import;
 grpc_server_request_call_type grpc_server_request_call_import;
 grpc_server_register_method_type grpc_server_register_method_import;
 grpc_server_request_registered_call_type grpc_server_request_registered_call_import;
 grpc_server_create_type grpc_server_create_import;
 grpc_server_register_completion_queue_type grpc_server_register_completion_queue_import;
-grpc_server_register_non_listening_completion_queue_type grpc_server_register_non_listening_completion_queue_import;
 grpc_server_add_insecure_http2_port_type grpc_server_add_insecure_http2_port_import;
 grpc_server_start_type grpc_server_start_import;
 grpc_server_shutdown_and_notify_type grpc_server_shutdown_and_notify_import;
@@ -172,17 +127,35 @@ grpc_google_iam_credentials_create_type grpc_google_iam_credentials_create_impor
 grpc_metadata_credentials_create_from_plugin_type grpc_metadata_credentials_create_from_plugin_import;
 grpc_secure_channel_create_type grpc_secure_channel_create_import;
 grpc_server_credentials_release_type grpc_server_credentials_release_import;
+grpc_ssl_server_certificate_config_create_type grpc_ssl_server_certificate_config_create_import;
+grpc_ssl_server_certificate_config_destroy_type grpc_ssl_server_certificate_config_destroy_import;
 grpc_ssl_server_credentials_create_type grpc_ssl_server_credentials_create_import;
 grpc_ssl_server_credentials_create_ex_type grpc_ssl_server_credentials_create_ex_import;
+grpc_ssl_server_credentials_create_options_using_config_type grpc_ssl_server_credentials_create_options_using_config_import;
+grpc_ssl_server_credentials_create_options_using_config_fetcher_type grpc_ssl_server_credentials_create_options_using_config_fetcher_import;
+grpc_ssl_server_credentials_options_destroy_type grpc_ssl_server_credentials_options_destroy_import;
+grpc_ssl_server_credentials_create_with_options_type grpc_ssl_server_credentials_create_with_options_import;
 grpc_server_add_secure_http2_port_type grpc_server_add_secure_http2_port_import;
 grpc_call_set_credentials_type grpc_call_set_credentials_import;
 grpc_server_credentials_set_auth_metadata_processor_type grpc_server_credentials_set_auth_metadata_processor_import;
+grpc_raw_byte_buffer_create_type grpc_raw_byte_buffer_create_import;
+grpc_raw_compressed_byte_buffer_create_type grpc_raw_compressed_byte_buffer_create_import;
+grpc_byte_buffer_copy_type grpc_byte_buffer_copy_import;
+grpc_byte_buffer_length_type grpc_byte_buffer_length_import;
+grpc_byte_buffer_destroy_type grpc_byte_buffer_destroy_import;
+grpc_byte_buffer_reader_init_type grpc_byte_buffer_reader_init_import;
+grpc_byte_buffer_reader_destroy_type grpc_byte_buffer_reader_destroy_import;
+grpc_byte_buffer_reader_next_type grpc_byte_buffer_reader_next_import;
+grpc_byte_buffer_reader_readall_type grpc_byte_buffer_reader_readall_import;
+grpc_raw_byte_buffer_from_reader_type grpc_raw_byte_buffer_from_reader_import;
 grpc_slice_ref_type grpc_slice_ref_import;
 grpc_slice_unref_type grpc_slice_unref_import;
+grpc_slice_copy_type grpc_slice_copy_import;
 grpc_slice_new_type grpc_slice_new_import;
 grpc_slice_new_with_user_data_type grpc_slice_new_with_user_data_import;
 grpc_slice_new_with_len_type grpc_slice_new_with_len_import;
 grpc_slice_malloc_type grpc_slice_malloc_import;
+grpc_slice_malloc_large_type grpc_slice_malloc_large_import;
 grpc_slice_intern_type grpc_slice_intern_import;
 grpc_slice_from_copied_string_type grpc_slice_from_copied_string_import;
 grpc_slice_from_copied_buffer_type grpc_slice_from_copied_buffer_import;
@@ -191,6 +164,7 @@ grpc_slice_from_static_buffer_type grpc_slice_from_static_buffer_import;
 grpc_slice_sub_type grpc_slice_sub_import;
 grpc_slice_sub_no_ref_type grpc_slice_sub_no_ref_import;
 grpc_slice_split_tail_type grpc_slice_split_tail_import;
+grpc_slice_split_tail_maybe_ref_type grpc_slice_split_tail_maybe_ref_import;
 grpc_slice_split_head_type grpc_slice_split_head_import;
 grpc_empty_slice_type grpc_empty_slice_import;
 grpc_slice_default_hash_impl_type grpc_slice_default_hash_impl_import;
@@ -198,7 +172,6 @@ grpc_slice_default_eq_impl_type grpc_slice_default_eq_impl_import;
 grpc_slice_eq_type grpc_slice_eq_import;
 grpc_slice_cmp_type grpc_slice_cmp_import;
 grpc_slice_str_cmp_type grpc_slice_str_cmp_import;
-grpc_slice_buf_cmp_type grpc_slice_buf_cmp_import;
 grpc_slice_buf_start_eq_type grpc_slice_buf_start_eq_import;
 grpc_slice_rchr_type grpc_slice_rchr_import;
 grpc_slice_chr_type grpc_slice_chr_import;
@@ -219,6 +192,7 @@ grpc_slice_buffer_swap_type grpc_slice_buffer_swap_import;
 grpc_slice_buffer_move_into_type grpc_slice_buffer_move_into_import;
 grpc_slice_buffer_trim_end_type grpc_slice_buffer_trim_end_import;
 grpc_slice_buffer_move_first_type grpc_slice_buffer_move_first_import;
+grpc_slice_buffer_move_first_no_ref_type grpc_slice_buffer_move_first_no_ref_import;
 grpc_slice_buffer_move_first_into_buffer_type grpc_slice_buffer_move_first_into_buffer_import;
 grpc_slice_buffer_take_first_type grpc_slice_buffer_take_first_import;
 grpc_slice_buffer_undo_take_first_type grpc_slice_buffer_undo_take_first_import;
@@ -266,6 +240,7 @@ gpr_histogram_get_contents_type gpr_histogram_get_contents_import;
 gpr_histogram_merge_contents_type gpr_histogram_merge_contents_import;
 gpr_join_host_port_type gpr_join_host_port_import;
 gpr_split_host_port_type gpr_split_host_port_import;
+gpr_log_severity_string_type gpr_log_severity_string_import;
 gpr_log_type gpr_log_import;
 gpr_log_message_type gpr_log_message_import;
 gpr_set_log_verbosity_type gpr_set_log_verbosity_import;
@@ -334,51 +309,16 @@ gpr_sleep_until_type gpr_sleep_until_import;
 gpr_timespec_to_micros_type gpr_timespec_to_micros_import;
 
 void grpc_rb_load_imports(HMODULE library) {
-  grpc_raw_byte_buffer_create_import = (grpc_raw_byte_buffer_create_type) GetProcAddress(library, "grpc_raw_byte_buffer_create");
-  grpc_raw_compressed_byte_buffer_create_import = (grpc_raw_compressed_byte_buffer_create_type) GetProcAddress(library, "grpc_raw_compressed_byte_buffer_create");
-  grpc_byte_buffer_copy_import = (grpc_byte_buffer_copy_type) GetProcAddress(library, "grpc_byte_buffer_copy");
-  grpc_byte_buffer_length_import = (grpc_byte_buffer_length_type) GetProcAddress(library, "grpc_byte_buffer_length");
-  grpc_byte_buffer_destroy_import = (grpc_byte_buffer_destroy_type) GetProcAddress(library, "grpc_byte_buffer_destroy");
-  grpc_byte_buffer_reader_init_import = (grpc_byte_buffer_reader_init_type) GetProcAddress(library, "grpc_byte_buffer_reader_init");
-  grpc_byte_buffer_reader_destroy_import = (grpc_byte_buffer_reader_destroy_type) GetProcAddress(library, "grpc_byte_buffer_reader_destroy");
-  grpc_byte_buffer_reader_next_import = (grpc_byte_buffer_reader_next_type) GetProcAddress(library, "grpc_byte_buffer_reader_next");
-  grpc_byte_buffer_reader_readall_import = (grpc_byte_buffer_reader_readall_type) GetProcAddress(library, "grpc_byte_buffer_reader_readall");
-  grpc_raw_byte_buffer_from_reader_import = (grpc_raw_byte_buffer_from_reader_type) GetProcAddress(library, "grpc_raw_byte_buffer_from_reader");
-  census_initialize_import = (census_initialize_type) GetProcAddress(library, "census_initialize");
-  census_shutdown_import = (census_shutdown_type) GetProcAddress(library, "census_shutdown");
-  census_supported_import = (census_supported_type) GetProcAddress(library, "census_supported");
-  census_enabled_import = (census_enabled_type) GetProcAddress(library, "census_enabled");
-  census_context_create_import = (census_context_create_type) GetProcAddress(library, "census_context_create");
-  census_context_destroy_import = (census_context_destroy_type) GetProcAddress(library, "census_context_destroy");
-  census_context_get_status_import = (census_context_get_status_type) GetProcAddress(library, "census_context_get_status");
-  census_context_initialize_iterator_import = (census_context_initialize_iterator_type) GetProcAddress(library, "census_context_initialize_iterator");
-  census_context_next_tag_import = (census_context_next_tag_type) GetProcAddress(library, "census_context_next_tag");
-  census_context_get_tag_import = (census_context_get_tag_type) GetProcAddress(library, "census_context_get_tag");
-  census_context_encode_import = (census_context_encode_type) GetProcAddress(library, "census_context_encode");
-  census_context_decode_import = (census_context_decode_type) GetProcAddress(library, "census_context_decode");
-  census_trace_mask_import = (census_trace_mask_type) GetProcAddress(library, "census_trace_mask");
-  census_set_trace_mask_import = (census_set_trace_mask_type) GetProcAddress(library, "census_set_trace_mask");
-  census_start_rpc_op_timestamp_import = (census_start_rpc_op_timestamp_type) GetProcAddress(library, "census_start_rpc_op_timestamp");
-  census_start_client_rpc_op_import = (census_start_client_rpc_op_type) GetProcAddress(library, "census_start_client_rpc_op");
-  census_set_rpc_client_peer_import = (census_set_rpc_client_peer_type) GetProcAddress(library, "census_set_rpc_client_peer");
-  census_start_server_rpc_op_import = (census_start_server_rpc_op_type) GetProcAddress(library, "census_start_server_rpc_op");
-  census_start_op_import = (census_start_op_type) GetProcAddress(library, "census_start_op");
-  census_end_op_import = (census_end_op_type) GetProcAddress(library, "census_end_op");
-  census_trace_print_import = (census_trace_print_type) GetProcAddress(library, "census_trace_print");
-  census_trace_scan_start_import = (census_trace_scan_start_type) GetProcAddress(library, "census_trace_scan_start");
-  census_get_trace_record_import = (census_get_trace_record_type) GetProcAddress(library, "census_get_trace_record");
-  census_trace_scan_end_import = (census_trace_scan_end_type) GetProcAddress(library, "census_trace_scan_end");
-  census_define_resource_import = (census_define_resource_type) GetProcAddress(library, "census_define_resource");
-  census_delete_resource_import = (census_delete_resource_type) GetProcAddress(library, "census_delete_resource");
-  census_resource_id_import = (census_resource_id_type) GetProcAddress(library, "census_resource_id");
-  census_record_values_import = (census_record_values_type) GetProcAddress(library, "census_record_values");
   grpc_compression_algorithm_parse_import = (grpc_compression_algorithm_parse_type) GetProcAddress(library, "grpc_compression_algorithm_parse");
   grpc_compression_algorithm_name_import = (grpc_compression_algorithm_name_type) GetProcAddress(library, "grpc_compression_algorithm_name");
+  grpc_stream_compression_algorithm_name_import = (grpc_stream_compression_algorithm_name_type) GetProcAddress(library, "grpc_stream_compression_algorithm_name");
   grpc_compression_algorithm_for_level_import = (grpc_compression_algorithm_for_level_type) GetProcAddress(library, "grpc_compression_algorithm_for_level");
+  grpc_stream_compression_algorithm_for_level_import = (grpc_stream_compression_algorithm_for_level_type) GetProcAddress(library, "grpc_stream_compression_algorithm_for_level");
   grpc_compression_options_init_import = (grpc_compression_options_init_type) GetProcAddress(library, "grpc_compression_options_init");
   grpc_compression_options_enable_algorithm_import = (grpc_compression_options_enable_algorithm_type) GetProcAddress(library, "grpc_compression_options_enable_algorithm");
   grpc_compression_options_disable_algorithm_import = (grpc_compression_options_disable_algorithm_type) GetProcAddress(library, "grpc_compression_options_disable_algorithm");
   grpc_compression_options_is_algorithm_enabled_import = (grpc_compression_options_is_algorithm_enabled_type) GetProcAddress(library, "grpc_compression_options_is_algorithm_enabled");
+  grpc_compression_options_is_stream_compression_algorithm_enabled_import = (grpc_compression_options_is_stream_compression_algorithm_enabled_type) GetProcAddress(library, "grpc_compression_options_is_stream_compression_algorithm_enabled");
   grpc_metadata_array_init_import = (grpc_metadata_array_init_type) GetProcAddress(library, "grpc_metadata_array_init");
   grpc_metadata_array_destroy_import = (grpc_metadata_array_destroy_type) GetProcAddress(library, "grpc_metadata_array_destroy");
   grpc_call_details_init_import = (grpc_call_details_init_type) GetProcAddress(library, "grpc_call_details_init");
@@ -396,18 +336,23 @@ void grpc_rb_load_imports(HMODULE library) {
   grpc_completion_queue_pluck_import = (grpc_completion_queue_pluck_type) GetProcAddress(library, "grpc_completion_queue_pluck");
   grpc_completion_queue_shutdown_import = (grpc_completion_queue_shutdown_type) GetProcAddress(library, "grpc_completion_queue_shutdown");
   grpc_completion_queue_destroy_import = (grpc_completion_queue_destroy_type) GetProcAddress(library, "grpc_completion_queue_destroy");
+  grpc_completion_queue_thread_local_cache_init_import = (grpc_completion_queue_thread_local_cache_init_type) GetProcAddress(library, "grpc_completion_queue_thread_local_cache_init");
+  grpc_completion_queue_thread_local_cache_flush_import = (grpc_completion_queue_thread_local_cache_flush_type) GetProcAddress(library, "grpc_completion_queue_thread_local_cache_flush");
   grpc_alarm_create_import = (grpc_alarm_create_type) GetProcAddress(library, "grpc_alarm_create");
+  grpc_alarm_set_import = (grpc_alarm_set_type) GetProcAddress(library, "grpc_alarm_set");
   grpc_alarm_cancel_import = (grpc_alarm_cancel_type) GetProcAddress(library, "grpc_alarm_cancel");
   grpc_alarm_destroy_import = (grpc_alarm_destroy_type) GetProcAddress(library, "grpc_alarm_destroy");
   grpc_channel_check_connectivity_state_import = (grpc_channel_check_connectivity_state_type) GetProcAddress(library, "grpc_channel_check_connectivity_state");
+  grpc_channel_num_external_connectivity_watchers_import = (grpc_channel_num_external_connectivity_watchers_type) GetProcAddress(library, "grpc_channel_num_external_connectivity_watchers");
   grpc_channel_watch_connectivity_state_import = (grpc_channel_watch_connectivity_state_type) GetProcAddress(library, "grpc_channel_watch_connectivity_state");
+  grpc_channel_support_connectivity_watcher_import = (grpc_channel_support_connectivity_watcher_type) GetProcAddress(library, "grpc_channel_support_connectivity_watcher");
   grpc_channel_create_call_import = (grpc_channel_create_call_type) GetProcAddress(library, "grpc_channel_create_call");
   grpc_channel_ping_import = (grpc_channel_ping_type) GetProcAddress(library, "grpc_channel_ping");
   grpc_channel_register_call_import = (grpc_channel_register_call_type) GetProcAddress(library, "grpc_channel_register_call");
   grpc_channel_create_registered_call_import = (grpc_channel_create_registered_call_type) GetProcAddress(library, "grpc_channel_create_registered_call");
+  grpc_call_arena_alloc_import = (grpc_call_arena_alloc_type) GetProcAddress(library, "grpc_call_arena_alloc");
   grpc_call_start_batch_import = (grpc_call_start_batch_type) GetProcAddress(library, "grpc_call_start_batch");
   grpc_call_get_peer_import = (grpc_call_get_peer_type) GetProcAddress(library, "grpc_call_get_peer");
-  grpc_call_set_load_reporting_cost_context_import = (grpc_call_set_load_reporting_cost_context_type) GetProcAddress(library, "grpc_call_set_load_reporting_cost_context");
   grpc_census_call_set_context_import = (grpc_census_call_set_context_type) GetProcAddress(library, "grpc_census_call_set_context");
   grpc_census_call_get_context_import = (grpc_census_call_get_context_type) GetProcAddress(library, "grpc_census_call_get_context");
   grpc_channel_get_target_import = (grpc_channel_get_target_type) GetProcAddress(library, "grpc_channel_get_target");
@@ -417,13 +362,13 @@ void grpc_rb_load_imports(HMODULE library) {
   grpc_channel_destroy_import = (grpc_channel_destroy_type) GetProcAddress(library, "grpc_channel_destroy");
   grpc_call_cancel_import = (grpc_call_cancel_type) GetProcAddress(library, "grpc_call_cancel");
   grpc_call_cancel_with_status_import = (grpc_call_cancel_with_status_type) GetProcAddress(library, "grpc_call_cancel_with_status");
-  grpc_call_destroy_import = (grpc_call_destroy_type) GetProcAddress(library, "grpc_call_destroy");
+  grpc_call_ref_import = (grpc_call_ref_type) GetProcAddress(library, "grpc_call_ref");
+  grpc_call_unref_import = (grpc_call_unref_type) GetProcAddress(library, "grpc_call_unref");
   grpc_server_request_call_import = (grpc_server_request_call_type) GetProcAddress(library, "grpc_server_request_call");
   grpc_server_register_method_import = (grpc_server_register_method_type) GetProcAddress(library, "grpc_server_register_method");
   grpc_server_request_registered_call_import = (grpc_server_request_registered_call_type) GetProcAddress(library, "grpc_server_request_registered_call");
   grpc_server_create_import = (grpc_server_create_type) GetProcAddress(library, "grpc_server_create");
   grpc_server_register_completion_queue_import = (grpc_server_register_completion_queue_type) GetProcAddress(library, "grpc_server_register_completion_queue");
-  grpc_server_register_non_listening_completion_queue_import = (grpc_server_register_non_listening_completion_queue_type) GetProcAddress(library, "grpc_server_register_non_listening_completion_queue");
   grpc_server_add_insecure_http2_port_import = (grpc_server_add_insecure_http2_port_type) GetProcAddress(library, "grpc_server_add_insecure_http2_port");
   grpc_server_start_import = (grpc_server_start_type) GetProcAddress(library, "grpc_server_start");
   grpc_server_shutdown_and_notify_import = (grpc_server_shutdown_and_notify_type) GetProcAddress(library, "grpc_server_shutdown_and_notify");
@@ -469,17 +414,35 @@ void grpc_rb_load_imports(HMODULE library) {
   grpc_metadata_credentials_create_from_plugin_import = (grpc_metadata_credentials_create_from_plugin_type) GetProcAddress(library, "grpc_metadata_credentials_create_from_plugin");
   grpc_secure_channel_create_import = (grpc_secure_channel_create_type) GetProcAddress(library, "grpc_secure_channel_create");
   grpc_server_credentials_release_import = (grpc_server_credentials_release_type) GetProcAddress(library, "grpc_server_credentials_release");
+  grpc_ssl_server_certificate_config_create_import = (grpc_ssl_server_certificate_config_create_type) GetProcAddress(library, "grpc_ssl_server_certificate_config_create");
+  grpc_ssl_server_certificate_config_destroy_import = (grpc_ssl_server_certificate_config_destroy_type) GetProcAddress(library, "grpc_ssl_server_certificate_config_destroy");
   grpc_ssl_server_credentials_create_import = (grpc_ssl_server_credentials_create_type) GetProcAddress(library, "grpc_ssl_server_credentials_create");
   grpc_ssl_server_credentials_create_ex_import = (grpc_ssl_server_credentials_create_ex_type) GetProcAddress(library, "grpc_ssl_server_credentials_create_ex");
+  grpc_ssl_server_credentials_create_options_using_config_import = (grpc_ssl_server_credentials_create_options_using_config_type) GetProcAddress(library, "grpc_ssl_server_credentials_create_options_using_config");
+  grpc_ssl_server_credentials_create_options_using_config_fetcher_import = (grpc_ssl_server_credentials_create_options_using_config_fetcher_type) GetProcAddress(library, "grpc_ssl_server_credentials_create_options_using_config_fetcher");
+  grpc_ssl_server_credentials_options_destroy_import = (grpc_ssl_server_credentials_options_destroy_type) GetProcAddress(library, "grpc_ssl_server_credentials_options_destroy");
+  grpc_ssl_server_credentials_create_with_options_import = (grpc_ssl_server_credentials_create_with_options_type) GetProcAddress(library, "grpc_ssl_server_credentials_create_with_options");
   grpc_server_add_secure_http2_port_import = (grpc_server_add_secure_http2_port_type) GetProcAddress(library, "grpc_server_add_secure_http2_port");
   grpc_call_set_credentials_import = (grpc_call_set_credentials_type) GetProcAddress(library, "grpc_call_set_credentials");
   grpc_server_credentials_set_auth_metadata_processor_import = (grpc_server_credentials_set_auth_metadata_processor_type) GetProcAddress(library, "grpc_server_credentials_set_auth_metadata_processor");
+  grpc_raw_byte_buffer_create_import = (grpc_raw_byte_buffer_create_type) GetProcAddress(library, "grpc_raw_byte_buffer_create");
+  grpc_raw_compressed_byte_buffer_create_import = (grpc_raw_compressed_byte_buffer_create_type) GetProcAddress(library, "grpc_raw_compressed_byte_buffer_create");
+  grpc_byte_buffer_copy_import = (grpc_byte_buffer_copy_type) GetProcAddress(library, "grpc_byte_buffer_copy");
+  grpc_byte_buffer_length_import = (grpc_byte_buffer_length_type) GetProcAddress(library, "grpc_byte_buffer_length");
+  grpc_byte_buffer_destroy_import = (grpc_byte_buffer_destroy_type) GetProcAddress(library, "grpc_byte_buffer_destroy");
+  grpc_byte_buffer_reader_init_import = (grpc_byte_buffer_reader_init_type) GetProcAddress(library, "grpc_byte_buffer_reader_init");
+  grpc_byte_buffer_reader_destroy_import = (grpc_byte_buffer_reader_destroy_type) GetProcAddress(library, "grpc_byte_buffer_reader_destroy");
+  grpc_byte_buffer_reader_next_import = (grpc_byte_buffer_reader_next_type) GetProcAddress(library, "grpc_byte_buffer_reader_next");
+  grpc_byte_buffer_reader_readall_import = (grpc_byte_buffer_reader_readall_type) GetProcAddress(library, "grpc_byte_buffer_reader_readall");
+  grpc_raw_byte_buffer_from_reader_import = (grpc_raw_byte_buffer_from_reader_type) GetProcAddress(library, "grpc_raw_byte_buffer_from_reader");
   grpc_slice_ref_import = (grpc_slice_ref_type) GetProcAddress(library, "grpc_slice_ref");
   grpc_slice_unref_import = (grpc_slice_unref_type) GetProcAddress(library, "grpc_slice_unref");
+  grpc_slice_copy_import = (grpc_slice_copy_type) GetProcAddress(library, "grpc_slice_copy");
   grpc_slice_new_import = (grpc_slice_new_type) GetProcAddress(library, "grpc_slice_new");
   grpc_slice_new_with_user_data_import = (grpc_slice_new_with_user_data_type) GetProcAddress(library, "grpc_slice_new_with_user_data");
   grpc_slice_new_with_len_import = (grpc_slice_new_with_len_type) GetProcAddress(library, "grpc_slice_new_with_len");
   grpc_slice_malloc_import = (grpc_slice_malloc_type) GetProcAddress(library, "grpc_slice_malloc");
+  grpc_slice_malloc_large_import = (grpc_slice_malloc_large_type) GetProcAddress(library, "grpc_slice_malloc_large");
   grpc_slice_intern_import = (grpc_slice_intern_type) GetProcAddress(library, "grpc_slice_intern");
   grpc_slice_from_copied_string_import = (grpc_slice_from_copied_string_type) GetProcAddress(library, "grpc_slice_from_copied_string");
   grpc_slice_from_copied_buffer_import = (grpc_slice_from_copied_buffer_type) GetProcAddress(library, "grpc_slice_from_copied_buffer");
@@ -488,6 +451,7 @@ void grpc_rb_load_imports(HMODULE library) {
   grpc_slice_sub_import = (grpc_slice_sub_type) GetProcAddress(library, "grpc_slice_sub");
   grpc_slice_sub_no_ref_import = (grpc_slice_sub_no_ref_type) GetProcAddress(library, "grpc_slice_sub_no_ref");
   grpc_slice_split_tail_import = (grpc_slice_split_tail_type) GetProcAddress(library, "grpc_slice_split_tail");
+  grpc_slice_split_tail_maybe_ref_import = (grpc_slice_split_tail_maybe_ref_type) GetProcAddress(library, "grpc_slice_split_tail_maybe_ref");
   grpc_slice_split_head_import = (grpc_slice_split_head_type) GetProcAddress(library, "grpc_slice_split_head");
   grpc_empty_slice_import = (grpc_empty_slice_type) GetProcAddress(library, "grpc_empty_slice");
   grpc_slice_default_hash_impl_import = (grpc_slice_default_hash_impl_type) GetProcAddress(library, "grpc_slice_default_hash_impl");
@@ -495,7 +459,6 @@ void grpc_rb_load_imports(HMODULE library) {
   grpc_slice_eq_import = (grpc_slice_eq_type) GetProcAddress(library, "grpc_slice_eq");
   grpc_slice_cmp_import = (grpc_slice_cmp_type) GetProcAddress(library, "grpc_slice_cmp");
   grpc_slice_str_cmp_import = (grpc_slice_str_cmp_type) GetProcAddress(library, "grpc_slice_str_cmp");
-  grpc_slice_buf_cmp_import = (grpc_slice_buf_cmp_type) GetProcAddress(library, "grpc_slice_buf_cmp");
   grpc_slice_buf_start_eq_import = (grpc_slice_buf_start_eq_type) GetProcAddress(library, "grpc_slice_buf_start_eq");
   grpc_slice_rchr_import = (grpc_slice_rchr_type) GetProcAddress(library, "grpc_slice_rchr");
   grpc_slice_chr_import = (grpc_slice_chr_type) GetProcAddress(library, "grpc_slice_chr");
@@ -516,6 +479,7 @@ void grpc_rb_load_imports(HMODULE library) {
   grpc_slice_buffer_move_into_import = (grpc_slice_buffer_move_into_type) GetProcAddress(library, "grpc_slice_buffer_move_into");
   grpc_slice_buffer_trim_end_import = (grpc_slice_buffer_trim_end_type) GetProcAddress(library, "grpc_slice_buffer_trim_end");
   grpc_slice_buffer_move_first_import = (grpc_slice_buffer_move_first_type) GetProcAddress(library, "grpc_slice_buffer_move_first");
+  grpc_slice_buffer_move_first_no_ref_import = (grpc_slice_buffer_move_first_no_ref_type) GetProcAddress(library, "grpc_slice_buffer_move_first_no_ref");
   grpc_slice_buffer_move_first_into_buffer_import = (grpc_slice_buffer_move_first_into_buffer_type) GetProcAddress(library, "grpc_slice_buffer_move_first_into_buffer");
   grpc_slice_buffer_take_first_import = (grpc_slice_buffer_take_first_type) GetProcAddress(library, "grpc_slice_buffer_take_first");
   grpc_slice_buffer_undo_take_first_import = (grpc_slice_buffer_undo_take_first_type) GetProcAddress(library, "grpc_slice_buffer_undo_take_first");
@@ -563,6 +527,7 @@ void grpc_rb_load_imports(HMODULE library) {
   gpr_histogram_merge_contents_import = (gpr_histogram_merge_contents_type) GetProcAddress(library, "gpr_histogram_merge_contents");
   gpr_join_host_port_import = (gpr_join_host_port_type) GetProcAddress(library, "gpr_join_host_port");
   gpr_split_host_port_import = (gpr_split_host_port_type) GetProcAddress(library, "gpr_split_host_port");
+  gpr_log_severity_string_import = (gpr_log_severity_string_type) GetProcAddress(library, "gpr_log_severity_string");
   gpr_log_import = (gpr_log_type) GetProcAddress(library, "gpr_log");
   gpr_log_message_import = (gpr_log_message_type) GetProcAddress(library, "gpr_log_message");
   gpr_set_log_verbosity_import = (gpr_set_log_verbosity_type) GetProcAddress(library, "gpr_set_log_verbosity");

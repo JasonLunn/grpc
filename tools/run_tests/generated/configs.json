@@ -20,7 +20,10 @@
     }
   }, 
   {
-    "config": "msan"
+    "config": "msan", 
+    "environ": {
+      "MSAN_OPTIONS": "poison_in_dtor=1"
+    }
   }, 
   {
     "config": "basicprof"
@@ -37,6 +40,9 @@
     "environ": {
       "ASAN_OPTIONS": "detect_leaks=0:color=always"
     }
+  }, 
+  {
+    "config": "c++-compat"
   }, 
   {
     "config": "ubsan", 
